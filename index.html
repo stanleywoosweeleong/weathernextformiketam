@@ -116,7 +116,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%237dd3fc%22/><circle cx=%2278%22 cy=%2226%22 r=%2210%22 fill=%22%23fbbf24%22/><ellipse cx=%2224%22 cy=%2224%22 rx=%2213%22 ry=%225%22 fill=%22%23fff%22/><path d=%22M-5 72 L40 22 L72 72 Z%22 fill=%22%235b8c5a%22/><path d=%22M28 78 L60 14 L94 78 Z%22 fill=%22%233f7d3f%22/><path d=%22M60 14 L94 78 L60 78 Z%22 fill=%22%232f5f2f%22/><path d=%22M60 14 L52 31 L57 33 L60 27 L62 32 Z%22 fill=%22%235aa45a%22 opacity=%220.85%22/><path d=%22M0 74 Q50 64 100 74 L100 100 L0 100 Z%22 fill=%22%234f9e35%22/><circle cx=%2222%22 cy=%2280%22 r=%2210%22 fill=%22%232e7d32%22/><rect x=%2220%22 y=%2286%22 width=%224%22 height=%229%22 fill=%22%237c4a21%22/><circle cx=%2280%22 cy=%2282%22 r=%2211%22 fill=%22%232e7d32%22/><rect x=%2278%22 y=%2289%22 width=%224%22 height=%229%22 fill=%22%237c4a21%22/><circle cx=%2250%22 cy=%2284%22 r=%224%22 fill=%22%23f0c19a%22/><rect x=%2246%22 y=%2288%22 width=%228%22 height=%229%22 rx=%222%22 fill=%22%23ea7a35%22/></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root {
@@ -678,6 +678,40 @@
     </style>
 </head>
 <body class="flex flex-col">
+
+    <!-- ============================================================ -->
+    <!-- BOOT SCREEN — painted immediately, before Tailwind/Firebase   -->
+    <!-- load. Uses ONLY inline styles so it renders even while the    -->
+    <!-- render-blocking CDN scripts are still resolving. Removed by   -->
+    <!-- window.hideBootScreen() once initApp()'s first render runs,   -->
+    <!-- with a 12s safety timeout as a fallback.                      -->
+    <!-- ============================================================ -->
+    <div id="boot-screen" style="position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#7dd3fc;transition:opacity 0.4s ease;">
+        <div style="width:96px;height:96px;border-radius:22px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.18);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="96" height="96"><rect width="100" height="100" rx="22" fill="#7dd3fc"/><circle cx="78" cy="26" r="10" fill="#fbbf24"/><ellipse cx="24" cy="24" rx="13" ry="5" fill="#fff"/><path d="M-5 72 L40 22 L72 72 Z" fill="#5b8c5a"/><path d="M28 78 L60 14 L94 78 Z" fill="#3f7d3f"/><path d="M60 14 L94 78 L60 78 Z" fill="#2f5f2f"/><path d="M60 14 L52 31 L57 33 L60 27 L62 32 Z" fill="#5aa45a" opacity="0.85"/><path d="M0 74 Q50 64 100 74 L100 100 L0 100 Z" fill="#4f9e35"/><circle cx="22" cy="80" r="10" fill="#2e7d32"/><rect x="20" y="86" width="4" height="9" fill="#7c4a21"/><circle cx="80" cy="82" r="11" fill="#2e7d32"/><rect x="78" y="89" width="4" height="9" fill="#7c4a21"/><circle cx="50" cy="84" r="4" fill="#f0c19a"/><rect x="46" y="88" width="8" height="9" rx="2" fill="#ea7a35"/></svg>
+        </div>
+        <div style="margin-top:22px;width:34px;height:34px;border:4px solid rgba(255,255,255,0.45);border-top-color:#ffffff;border-radius:50%;animation:bootspin 0.8s linear infinite;"></div>
+        <div style="margin-top:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-shadow:0 1px 2px rgba(0,0,0,0.15);letter-spacing:0.02em;">载入中… Loading…</div>
+        <style>@keyframes bootspin{to{transform:rotate(360deg);}}</style>
+    </div>
+    <script>
+        // hideBootScreen — fades and removes the boot overlay. Safe to call
+        // multiple times. Defined inline (not in the module script) so it is
+        // available even if the module fails to load.
+        window.hideBootScreen = function () {
+            var el = document.getElementById('boot-screen');
+            if (!el) return;
+            el.style.opacity = '0';
+            setTimeout(function () {
+                if (el && el.parentNode) el.parentNode.removeChild(el);
+            }, 450);
+        };
+        // Safety timeout: clear the loader after 12s no matter what, so a
+        // stalled init or CDN never traps the user on the boot screen.
+        setTimeout(function () {
+            if (window.hideBootScreen) window.hideBootScreen();
+        }, 12000);
+    </script>
 
     <!-- Toast UI -->
     <div id="toast" class="toast-notification">
@@ -2026,6 +2060,8 @@
                 if(le) le.scrollTop = 0;
 
                 renderList(); updateLunarDate(); updateModelUI(); syncUI();
+                // First paint of the real UI is done — clear the boot screen.
+                if (window.hideBootScreen) window.hideBootScreen();
                 
                 try {
                     await signInAnonymously(auth);
@@ -2033,7 +2069,12 @@
                     console.warn("Auth failed:", err);
                 }
                 
-            } catch (err) { console.error("Init Error:", err); }
+            } catch (err) {
+                console.error("Init Error:", err);
+                // Clear the boot screen even if init failed — never trap the
+                // user on the loader.
+                if (window.hideBootScreen) window.hideBootScreen();
+            }
             initGestures();
         }
 

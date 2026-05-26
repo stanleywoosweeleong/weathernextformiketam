@@ -99,7 +99,7 @@ The service worker caches the app shell. When you push changes, bump the
 their next visit. The current value is:
 
 ```
-wnext-weathernextformiketam-202605240630
+wnext-weathernextformiketam-202605260001
 ```
 
 ---
