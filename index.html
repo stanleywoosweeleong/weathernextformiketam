@@ -7354,7 +7354,17 @@
                 }
                 btn.disabled = true; btn.style.opacity = "0.5"; const oS = scale, oX = posX, oY = posY; resetZoom(); await new Promise(r => setTimeout(r, 400));
                 const files = []; for (const lid of currentDisplayedIds) {
-                    const card = document.getElementById(`report-card-${lid}`); if (!card) continue;
+                    const card = document.getElementById(`report-card-${lid}`); if (!card) { console.warn('[download] card not found, skipping:', lid); continue; }
+
+                    // iOS Safari fix — bring the card on-screen before capture.
+                    // All cards live in one scrollable container but only the
+                    // visible one is composited; html2canvas captures off-screen
+                    // cards blank (and toBlob can return null), so on iPhone only
+                    // the on-screen location made it into `files`. Scrolling the
+                    // card into view and waiting ~2 frames forces iOS to paint it.
+                    card.scrollIntoView({ block: 'center', behavior: 'instant' });
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    await new Promise(r => setTimeout(r, 120));
                     
                     // Enhanced html2canvas config.
                     // Capture 16px wider than the card so the rightmost data (e.g. "1/6" date
@@ -7471,7 +7481,13 @@
                         }
                     });
                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                    if (blob) files.push(new File([blob], `${APP_BRANDING.screenshotFileName}_${lid}.png`, { type: 'image/png' }));
+                    if (blob) {
+                        files.push(new File([blob], `${APP_BRANDING.screenshotFileName}_${lid}.png`, { type: 'image/png' }));
+                    } else {
+                        // Loud failure — if a card still captures blank we want to
+                        // know which one, not silently drop it from the share.
+                        console.warn('[download] toBlob returned null for', lid, '— card skipped');
+                    }
                 }
                 scale = oS; posX = oX; posY = oY; applyTransform();
                 
