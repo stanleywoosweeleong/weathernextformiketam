@@ -7475,13 +7475,25 @@
                 }
                 scale = oS; posX = oX; posY = oY; applyTransform();
 
-                // DIAGNOSTIC (temporary) — remove once multi-image share is confirmed.
-                // Reports how many cards the render loop actually captured vs how many
-                // favourited locations were expected. Tells us whether a missing-image
-                // bug is in the render loop (count < expected) or the share branch
-                // (count == expected but images still don't all arrive).
-                window.showToast('Captured ' + files.length + ' / ' + currentDisplayedIds.length + ' images',
-                                 files.length < currentDisplayedIds.length);
+                // DIAGNOSTIC (temporary) — reports the exact values that decide
+                // which share branch runs, so we can see WHY Branch 1 is skipped.
+                // Remove once the multi-image share is confirmed working.
+                try {
+                    var _dHasShare = !!navigator.share;
+                    var _dHasCanShare = !!navigator.canShare;
+                    var _dCanShareFiles = false;
+                    var _dCanShareErr = '';
+                    try { _dCanShareFiles = navigator.canShare ? navigator.canShare({ files: files }) : false; }
+                    catch (e2) { _dCanShareErr = e2.name + ':' + e2.message; }
+                    window.showToast(
+                        'DIAG files=' + files.length +
+                        ' share=' + _dHasShare +
+                        ' canShare=' + _dHasCanShare +
+                        ' canShareFiles=' + _dCanShareFiles +
+                        (_dCanShareErr ? ' ERR(' + _dCanShareErr + ')' : ''),
+                        true
+                    );
+                } catch (eDiag) { console.warn('diag failed', eDiag); }
                 
                 if (files.length > 0) { 
                     // ============================================================
@@ -7534,7 +7546,13 @@
                             // (NotAllowedError, security failures) fall through to
                             // Branch 2 so the share still completes via desktop path.
                             if (err.name === 'AbortError') handled = true;
-                            else console.warn("Native share failed, falling back to WhatsApp Web:", err);
+                            else {
+                                console.warn("Native share failed, falling back to WhatsApp Web:", err);
+                                // DIAGNOSTIC (temporary) — surface the real error name/message
+                                // so we know why navigator.share() threw. Remove once fixed.
+                                try { window.showToast('DIAG share() threw — ' + err.name + ': ' + err.message, true); }
+                                catch (e3) {}
+                            }
                         }
                     }
 
