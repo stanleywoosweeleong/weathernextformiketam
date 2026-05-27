@@ -1,9 +1,9 @@
 // ============================================================
 // WeatherNext Service Worker
-// Version 1.0.152 — two-phase share fix (iOS gesture). bump CACHE_VERSION on each release
+// Version 1.0.153 — diagnostic overlay removed. bump CACHE_VERSION on each release
 // ============================================================
 
-const CACHE_VERSION = 'wnext-weathernextformiketam-202605271200';
+const CACHE_VERSION = 'wnext-weathernextformiketam-202605271600';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const WEATHER_CACHE = `${CACHE_VERSION}-weather`;
