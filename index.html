@@ -6033,10 +6033,6 @@
                     en: 'Possible Thunderstorm Days:', ms: 'Hari Kemungkinan Ribut Petir:', zh: '可能有暴雨的日期:',
                     ta: 'புயல் நாட்கள்:', my: 'မုန်တိုင်းရက်များ:'
                 }[lang] || 'Possible Thunderstorm Days:';
-                const fullForecastLabel = {
-                    en: 'Full forecast', ms: 'Ramalan penuh', zh: '完整预报',
-                    ta: 'முழு முன்னறிவிப்பு', my: 'ခန့်မှန်းအပြည့်အစုံ'
-                }[lang] || 'Full forecast';
                 
                 // Today line — always include even if calm.
                 const today = days[0];
@@ -6061,29 +6057,15 @@
                         lines.push(`- ${d.date} @ ${win} (${rainLabel} ${d.pp}%)`);
                     });
                 }
-                
-                // Deep-link: include id + lat/lng + both name fields so the recipient can
-                // recreate a dual-named custom location faithfully. The previous version
-                // encoded a single `name=` param which lost the alt-language name on the
-                // round trip (a "RESTAURANT 157 / 157 小食店" share carried only one name,
-                // and the recipient saved a single-language location).
-                //   - en/zh are encoded independently — recipient gets both or whichever exists
-                //   - name= is kept ONLY when neither en nor zh are present (defensive fallback;
-                //     shouldn't happen in practice since locName itself is derived from en/zh)
-                //   - Legacy URLs with only `name=` still parse correctly on the receiver side
-                //     because the receiver checks en/zh/name in priority order
-                if (loc) {
-                    let params = `?loc=${encodeURIComponent(lid)}&lat=${loc.lat}&lng=${loc.lng}`;
-                    if (resolvedEn) params += `&en=${encodeURIComponent(resolvedEn)}`;
-                    if (resolvedZh) params += `&zh=${encodeURIComponent(resolvedZh)}`;
-                    if (!resolvedEn && !resolvedZh) params += `&name=${encodeURIComponent(locName)}`;
-                    lines.push('');
-                    lines.push(`${fullForecastLabel}: ${BASE_URL}${params}`);
-                } else {
-                    lines.push('');
-                    lines.push(`${fullForecastLabel}: ${BASE_URL}`);
-                }
-                
+
+                // NOTE (v1.0.154): the full-forecast link used to be appended HERE,
+                // once per location, carrying that location's deep-link params. For
+                // the broadcast use case that produced a repeated link after every
+                // favourite — visual clutter, and confusing in a machine-translated
+                // relay chain. The link is now appended ONCE after the whole loop
+                // (see below). Recipients of a broadcast already have the app with
+                // their own farms, so a single plain app link is what they need.
+
                 // Separator between locations when sharing multiple (split-view case).
                 lines.push('');
                 lines.push('---');
@@ -6095,6 +6077,23 @@
                 lines.pop();
             }
             
+            // SINGLE FULL-FORECAST LINK (v1.0.154) — appended ONCE here, after all
+            // locations, instead of once per location inside the loop. A plain app
+            // link (no per-location deep-link params): broadcast recipients already
+            // have their own farms set up, so the link just needs to open the app.
+            // Label language follows the first location's language; falls back to
+            // English. Guarded so an empty report (no cached days) adds nothing.
+            if (lines.length > 0) {
+                const firstLang = (ids && ids.length && typeof getLang === 'function')
+                    ? getLang(ids[0]) : 'zh';
+                const linkLabel = {
+                    en: 'Full forecast', ms: 'Ramalan penuh', zh: '完整预报',
+                    ta: 'முழு முன்னறிவிப்பு', my: 'ခန့်မှန်းအပြည့်အစုံ'
+                }[firstLang] || 'Full forecast';
+                lines.push('');
+                lines.push(`${linkLabel}: ${BASE_URL}`);
+            }
+
             lines.push('');
             // CC-BY-4.0 attribution (v1.0.131). Required wherever data is displayed.
             // v1.0.132: dropped the "WeatherNext" tail — brand already in header.
