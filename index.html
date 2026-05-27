@@ -7336,6 +7336,23 @@
         
         window.downloadInfographic = async (e) => {
             if(e) e.preventDefault(); const btn = document.getElementById('dl-btn'); if(btn.disabled) return;
+            // DIAGNOSTIC (temporary) — declared at function scope so the trace and
+            // the overlay function are reachable from the catch/finally below.
+            // Remove this whole diagnostic once the multi-image share is fixed.
+            const _DIAG = { lines: [] };
+            const showDiag = () => {
+                try {
+                    const old = document.getElementById('diag-overlay');
+                    if (old) old.remove();
+                    const ov = document.createElement('div');
+                    ov.id = 'diag-overlay';
+                    ov.setAttribute('style', 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.92);color:#fff;font-family:monospace;font-size:13px;line-height:1.7;padding:24px;overflow:auto;-webkit-overflow-scrolling:touch;');
+                    ov.innerHTML = '<div style="font-weight:bold;font-size:15px;margin-bottom:12px;">SHARE DIAGNOSTIC — tap anywhere to close</div>' +
+                        _DIAG.lines.map((l) => '<div style="margin-bottom:6px;word-break:break-all;">' + String(l).replace(/</g, '&lt;') + '</div>').join('');
+                    ov.addEventListener('click', () => ov.remove());
+                    document.body.appendChild(ov);
+                } catch (eS) { console.warn('showDiag failed', eS); }
+            };
             try {
                 // SAFETY GUARD — ensure html2canvas is loaded before rendering.
                 // Defensive insurance: if the CDN is slow, wait up to 5s (100ms
@@ -7475,25 +7492,25 @@
                 }
                 scale = oS; posX = oX; posY = oY; applyTransform();
 
-                // DIAGNOSTIC (temporary) — reports the exact values that decide
-                // which share branch runs, so we can see WHY Branch 1 is skipped.
-                // Remove once the multi-image share is confirmed working.
+                // DIAGNOSTIC (temporary) — collect every value that decides which
+                // share branch runs. Shown via showDiag() in the finally block.
                 try {
-                    var _dHasShare = !!navigator.share;
-                    var _dHasCanShare = !!navigator.canShare;
-                    var _dCanShareFiles = false;
-                    var _dCanShareErr = '';
-                    try { _dCanShareFiles = navigator.canShare ? navigator.canShare({ files: files }) : false; }
-                    catch (e2) { _dCanShareErr = e2.name + ':' + e2.message; }
-                    window.showToast(
-                        'DIAG files=' + files.length +
-                        ' share=' + _dHasShare +
-                        ' canShare=' + _dHasCanShare +
-                        ' canShareFiles=' + _dCanShareFiles +
-                        (_dCanShareErr ? ' ERR(' + _dCanShareErr + ')' : ''),
-                        true
-                    );
-                } catch (eDiag) { console.warn('diag failed', eDiag); }
+                    _DIAG.lines.push('files captured = ' + files.length);
+                    _DIAG.lines.push('expected (favs) = ' + currentDisplayedIds.length);
+                    _DIAG.lines.push('navigator.share = ' + (!!navigator.share));
+                    _DIAG.lines.push('navigator.canShare = ' + (!!navigator.canShare));
+                    try {
+                        _DIAG.lines.push('canShare({files}) = ' + (navigator.canShare ? navigator.canShare({ files: files }) : 'n/a'));
+                    } catch (e2) {
+                        _DIAG.lines.push('canShare({files}) THREW = ' + e2.name + ': ' + e2.message);
+                    }
+                    if (files[0]) {
+                        _DIAG.lines.push('file[0].name = ' + files[0].name);
+                        _DIAG.lines.push('file[0].type = ' + files[0].type);
+                        _DIAG.lines.push('file[0].size = ' + files[0].size);
+                    }
+                    _DIAG.lines.push('userAgent = ' + navigator.userAgent);
+                } catch (eD) { _DIAG.lines.push('diag-collect error: ' + eD.message); }
                 
                 if (files.length > 0) { 
                     // ============================================================
@@ -7536,24 +7553,28 @@
                         : APP_BRANDING.shareFallbackText;
 
                     // ------ Branch 1: native file share (mobile primary) ------
+                    _DIAG.lines.push('--- branch decision ---');
                     if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+                        _DIAG.lines.push('Branch 1 ENTERED (native file share)');
                         try {
                             await navigator.share({ files, title: APP_BRANDING.shareTitle, text: shareText });
                             handled = true;
+                            _DIAG.lines.push('navigator.share() RESOLVED ok');
                         } catch (err) {
                             // AbortError = user closed the share sheet. Treat as handled
                             // (user made an explicit choice not to send). Other errors
                             // (NotAllowedError, security failures) fall through to
                             // Branch 2 so the share still completes via desktop path.
-                            if (err.name === 'AbortError') handled = true;
-                            else {
+                            if (err.name === 'AbortError') {
+                                handled = true;
+                                _DIAG.lines.push('navigator.share() AbortError (user dismissed)');
+                            } else {
                                 console.warn("Native share failed, falling back to WhatsApp Web:", err);
-                                // DIAGNOSTIC (temporary) — surface the real error name/message
-                                // so we know why navigator.share() threw. Remove once fixed.
-                                try { window.showToast('DIAG share() threw — ' + err.name + ': ' + err.message, true); }
-                                catch (e3) {}
+                                _DIAG.lines.push('navigator.share() THREW = ' + err.name + ': ' + err.message);
                             }
                         }
+                    } else {
+                        _DIAG.lines.push('Branch 1 SKIPPED (condition false) -> desktop fallback');
                     }
 
                     // ------ Branch 2: WhatsApp Web + PNG download (desktop primary) ------
@@ -7605,7 +7626,14 @@
                         handled = true;
                     }
                 }
-            } catch (err) { console.error(err); } finally { btn.disabled = false; btn.style.opacity = "1"; }
+            } catch (err) {
+                console.error(err);
+                try { _DIAG.lines.push('OUTER CATCH = ' + err.name + ': ' + err.message); } catch (e) {}
+            } finally {
+                btn.disabled = false; btn.style.opacity = "1";
+                // DIAGNOSTIC (temporary) — show the collected branch trace.
+                try { if (typeof showDiag === 'function') showDiag(); } catch (e) {}
+            }
         };
 
         document.addEventListener('DOMContentLoaded', async () => {

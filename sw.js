@@ -3,7 +3,7 @@
 // Version 1.0.0 — bump CACHE_VERSION on each release
 // ============================================================
 
-const CACHE_VERSION = 'wnext-weathernextformiketam-202605260005';
+const CACHE_VERSION = 'wnext-weathernextformiketam-202605260006';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const WEATHER_CACHE = `${CACHE_VERSION}-weather`;
