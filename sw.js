@@ -1,9 +1,9 @@
 // ============================================================
 // WeatherNext Service Worker
-// Version 1.0.154 — single full-forecast link at end of broadcast text. bump CACHE_VERSION on each release
+// Version 1.0.155 — launch-icon fix: removed duplicate inline apple-touch-icon, boot screen + install banner now use real icon files, unique manifest id + Miketam-specific iOS title tags. bump CACHE_VERSION on each release
 // ============================================================
 
-const CACHE_VERSION = 'wnext-weathernextformiketam-202605271900';
+const CACHE_VERSION = 'wnext-weathernextformiketam-202606010001';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const WEATHER_CACHE = `${CACHE_VERSION}-weather`;

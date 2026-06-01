@@ -2,6 +2,7 @@
   "name": "Miketam",
   "short_name": "Miketam 天气",
   "description": "Miketam — farm weather forecast / 个人化农友天气预报",
+  "id": "/weathernextformiketam/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
